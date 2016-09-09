@@ -7,10 +7,11 @@ import (
 )
 
 type classifier struct {
-	db *sql.DB
+	digest bool
+	db     *sql.DB
 }
 
-func Open(dsn string) (*classifier, error) {
+func Open(dsn string, digest bool) (*classifier, error) {
 	db, err := sql.Open(DBTYPE, dsn)
 	if err != nil {
 		return nil, err
@@ -19,20 +20,27 @@ func Open(dsn string) (*classifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &classifier{db: db}, nil
+	return &classifier{db: db, digest: digest}, nil
 }
 
 func (cf *classifier) Close() (err error) {
 	return cf.db.Close()
 }
 
-func (cf *classifier) Add(token []byte, category string) (err error) {
-	sum := sha1.Sum(token)
-	tok := hex.EncodeToString(sum[:])
+func (cf *classifier) stringy(token []byte) string {
+	if cf.digest {
+		sum := sha1.Sum(token)
+		return hex.EncodeToString(sum[:])
+	}
+	return hex.EncodeToString(token)
+}
+
+func (cf *classifier) add(token []byte, category string) (err error) {
 	tx, err := cf.db.Begin()
 	if err != nil {
 		return
 	}
+	tok := cf.stringy(token)
 	_, err = tx.Exec(SQL("addtok1"), tok, category)
 	if err != nil {
 		return
@@ -45,13 +53,12 @@ func (cf *classifier) Add(token []byte, category string) (err error) {
 	return
 }
 
-func (cf *classifier) Delete(token []byte, category string) (err error) {
-	sum := sha1.Sum(token)
-	tok := hex.EncodeToString(sum[:])
+func (cf *classifier) delete(token []byte, category string) (err error) {
 	tx, err := cf.db.Begin()
 	if err != nil {
 		return
 	}
+	tok := cf.stringy(token)
 	_, err = tx.Exec(SQL("deltok1"), tok, category)
 	if err != nil {
 		return
