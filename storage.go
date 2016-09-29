@@ -4,11 +4,11 @@ import (
 	"database/sql"
 )
 
-type classifier struct {
+type Classifier struct {
 	db *sql.DB
 }
 
-func Open(dsn string) (*classifier, error) {
+func Open(dsn string) (*Classifier, error) {
 	db, err := sql.Open(DBTYPE, dsn)
 	if err != nil {
 		return nil, err
@@ -17,43 +17,9 @@ func Open(dsn string) (*classifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &classifier{db: db}, nil
+	return &Classifier{db: db}, nil
 }
 
-func (cf *classifier) Close() (err error) {
+func (cf *Classifier) Close() (err error) {
 	return cf.db.Close()
-}
-
-func (cf *classifier) add(category string, token []byte) (err error) {
-	tx, err := cf.db.Begin()
-	if err != nil {
-		return
-	}
-	_, err = tx.Exec(SQL("addtok1"), token, category)
-	if err != nil {
-		return
-	}
-	_, err = tx.Exec(SQL("addtok2"), token, category)
-	if err != nil {
-		return
-	}
-	err = tx.Commit()
-	return
-}
-
-func (cf *classifier) delete(category string, token []byte) (err error) {
-	tx, err := cf.db.Begin()
-	if err != nil {
-		return
-	}
-	_, err = tx.Exec(SQL("deltok1"), token, category)
-	if err != nil {
-		return
-	}
-	_, err = tx.Exec(SQL("deltok2"), token, category)
-	if err != nil {
-		return
-	}
-	err = tx.Commit()
-	return
 }

@@ -1,8 +1,23 @@
 package mbayes
 
-func (cf *classifier) Train(category string, tokens ...[]byte) (err error) {
+func (cf *Classifier) Train(category string, tokens ...[]byte) (err error) {
+	tx, err := cf.db.Begin()
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err == nil {
+			err = tx.Commit()
+		} else {
+			tx.Rollback()
+		}
+	}()
 	for _, tk := range tokens {
-		err = cf.add(category, tk)
+		_, err = tx.Exec(SQL("addtok1"), tk, category)
+		if err != nil {
+			return
+		}
+		_, err = tx.Exec(SQL("addtok2"), tk, category)
 		if err != nil {
 			return
 		}
@@ -10,9 +25,24 @@ func (cf *classifier) Train(category string, tokens ...[]byte) (err error) {
 	return
 }
 
-func (cf *classifier) Untrain(category string, tokens ...[]byte) (err error) {
+func (cf *Classifier) Untrain(category string, tokens ...[]byte) (err error) {
+	tx, err := cf.db.Begin()
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err == nil {
+			err = tx.Commit()
+		} else {
+			tx.Rollback()
+		}
+	}()
 	for _, tk := range tokens {
-		err = cf.delete(category, tk)
+		_, err = tx.Exec(SQL("deltok1"), tk, category)
+		if err != nil {
+			return
+		}
+		_, err = tx.Exec(SQL("deltok2"), tk, category)
 		if err != nil {
 			return
 		}

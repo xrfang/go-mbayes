@@ -1,6 +1,6 @@
 package mbayes
 
-import _ "git.likeit.cn/github.com/mattn_go-sqlite3"
+import _ "github.com/mattn/go-sqlite3"
 
 const DBTYPE = "sqlite3"
 
