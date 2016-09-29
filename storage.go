@@ -1,17 +1,14 @@
 package mbayes
 
 import (
-	"crypto/sha1"
 	"database/sql"
-	"encoding/hex"
 )
 
 type classifier struct {
-	digest bool
-	db     *sql.DB
+	db *sql.DB
 }
 
-func Open(dsn string, digest bool) (*classifier, error) {
+func Open(dsn string) (*classifier, error) {
 	db, err := sql.Open(DBTYPE, dsn)
 	if err != nil {
 		return nil, err
@@ -20,32 +17,23 @@ func Open(dsn string, digest bool) (*classifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &classifier{db: db, digest: digest}, nil
+	return &classifier{db: db}, nil
 }
 
 func (cf *classifier) Close() (err error) {
 	return cf.db.Close()
 }
 
-func (cf *classifier) stringy(token []byte) string {
-	if cf.digest {
-		sum := sha1.Sum(token)
-		return hex.EncodeToString(sum[:])
-	}
-	return hex.EncodeToString(token)
-}
-
-func (cf *classifier) add(token []byte, category string) (err error) {
+func (cf *classifier) add(category string, token []byte) (err error) {
 	tx, err := cf.db.Begin()
 	if err != nil {
 		return
 	}
-	tok := cf.stringy(token)
-	_, err = tx.Exec(SQL("addtok1"), tok, category)
+	_, err = tx.Exec(SQL("addtok1"), token, category)
 	if err != nil {
 		return
 	}
-	_, err = tx.Exec(SQL("addtok2"), tok, category)
+	_, err = tx.Exec(SQL("addtok2"), token, category)
 	if err != nil {
 		return
 	}
@@ -53,17 +41,16 @@ func (cf *classifier) add(token []byte, category string) (err error) {
 	return
 }
 
-func (cf *classifier) delete(token []byte, category string) (err error) {
+func (cf *classifier) delete(category string, token []byte) (err error) {
 	tx, err := cf.db.Begin()
 	if err != nil {
 		return
 	}
-	tok := cf.stringy(token)
-	_, err = tx.Exec(SQL("deltok1"), tok, category)
+	_, err = tx.Exec(SQL("deltok1"), token, category)
 	if err != nil {
 		return
 	}
-	_, err = tx.Exec(SQL("deltok2"), tok, category)
+	_, err = tx.Exec(SQL("deltok2"), token, category)
 	if err != nil {
 		return
 	}

@@ -1,8 +1,8 @@
 package mbayes
 
-func (cf *classifier) Train(tokens [][]byte, category string) (err error) {
+func (cf *classifier) Train(category string, tokens ...[]byte) (err error) {
 	for _, tk := range tokens {
-		err = cf.add(tk, category)
+		err = cf.add(category, tk)
 		if err != nil {
 			return
 		}
@@ -10,9 +10,9 @@ func (cf *classifier) Train(tokens [][]byte, category string) (err error) {
 	return
 }
 
-func (cf *classifier) Untrain(tokens [][]byte, category string) (err error) {
+func (cf *classifier) Untrain(category string, tokens ...[]byte) (err error) {
 	for _, tk := range tokens {
-		err = cf.Untrain(tk, category)
+		err = cf.delete(category, tk)
 		if err != nil {
 			return
 		}

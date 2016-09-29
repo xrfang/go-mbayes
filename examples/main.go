@@ -16,7 +16,7 @@ func main() {
 	mb, err := mbayes.Open("mbayes.db")
 	assert(err)
 	defer mb.Close()
-	assert(mb.Add([]byte("hello world"), "cat1"))
-	//assert(mb.Delete([]byte("hello world"), "cat1"))
+	assert(mb.Train("cat1", []byte("hello"), []byte("world")))
+	assert(mb.Untrain("cat1", []byte("hello world")))
 	fmt.Printf("done.\n")
 }
