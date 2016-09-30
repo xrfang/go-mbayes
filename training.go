@@ -8,34 +8,28 @@ func (cf *Classifier) Train(category string, tokens ...[]byte) (err error) {
 	if cf.err != nil {
 		return
 	}
-	autoCommit := cf.tx == nil
-	var tx *sql.Tx
-	if autoCommit {
+	if cf.tx == nil { //auto commit
+		var tx *sql.Tx
 		tx, err = cf.db.Begin()
 		if err != nil {
 			return
 		}
+		for _, tk := range tokens {
+			err = cf.add(tx, category, tk)
+			if err != nil {
+				tx.Rollback()
+				return
+			}
+		}
+		err = tx.Commit()
 	} else {
-		tx = cf.tx
-	}
-	for _, tk := range tokens {
-		_, err = tx.Exec(SQL("addtok1"), tk, category)
-		if err != nil {
-			break
+		for _, tk := range tokens {
+			cf.que <- trainingSample{
+				action:  TA_TRAIN,
+				feature: tk,
+				label:   category,
+			}
 		}
-		_, err = tx.Exec(SQL("addtok2"), tk, category)
-		if err != nil {
-			break
-		}
-	}
-	if autoCommit {
-		if err == nil {
-			err = tx.Commit()
-		} else {
-			tx.Rollback()
-		}
-	} else {
-		cf.err = err
 	}
 	return
 }
@@ -44,34 +38,28 @@ func (cf *Classifier) Untrain(category string, tokens ...[]byte) (err error) {
 	if cf.err != nil {
 		return
 	}
-	autoCommit := cf.tx == nil
-	var tx *sql.Tx
-	if autoCommit {
+	if cf.tx == nil { //auto commit
+		var tx *sql.Tx
 		tx, err = cf.db.Begin()
 		if err != nil {
 			return
 		}
+		for _, tk := range tokens {
+			err = cf.del(tx, category, tk)
+			if err != nil {
+				tx.Rollback()
+				return
+			}
+		}
+		err = tx.Commit()
 	} else {
-		tx = cf.tx
-	}
-	for _, tk := range tokens {
-		_, err = tx.Exec(SQL("deltok1"), tk, category)
-		if err != nil {
-			break
+		for _, tk := range tokens {
+			cf.que <- trainingSample{
+				action:  TA_UNTRAIN,
+				feature: tk,
+				label:   category,
+			}
 		}
-		_, err = tx.Exec(SQL("deltok2"), tk, category)
-		if err != nil {
-			break
-		}
-	}
-	if autoCommit {
-		if err == nil {
-			err = tx.Commit()
-		} else {
-			tx.Rollback()
-		}
-	} else {
-		cf.err = err
 	}
 	return
 }
