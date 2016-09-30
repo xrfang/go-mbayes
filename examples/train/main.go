@@ -33,7 +33,7 @@ func train(path string) {
 	data, err := ioutil.ReadAll(f)
 	fmt.Println(cat, path)
 	tokens := r.FindAll(data, len(data))
-	c.Train(cat, tokens...)
+	assert(c.Train(cat, tokens...))
 }
 
 func main() {
@@ -47,6 +47,7 @@ func main() {
 	var err error
 	c, err = mbayes.Open(db)
 	assert(err)
+	assert(c.Begin())
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
@@ -54,4 +55,5 @@ func main() {
 		train(path)
 		return nil
 	})
+	assert(c.Commit())
 }
