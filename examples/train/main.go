@@ -32,7 +32,14 @@ func train(path string) {
 	defer f.Close()
 	data, err := ioutil.ReadAll(f)
 	fmt.Println(cat, path)
-	tokens := r.FindAll(data, len(data))
+	dedup := make(map[string]bool)
+	for _, tk := range r.FindAll(data, len(data)) {
+		dedup[string(tk)] = true
+	}
+	var tokens [][]byte
+	for tk := range dedup {
+		tokens = append(tokens, []byte(tk))
+	}
 	assert(c.Train(cat, tokens...))
 }
 
