@@ -59,7 +59,7 @@ func (cf *Classifier) Begin() (err error) {
 		return
 	}
 	cf.err = nil
-	cf.que = make(chan trainingSample, 1024)
+	cf.que = make(chan trainingSample, 128)
 	cf.wg.Add(1)
 	go func() {
 		for {

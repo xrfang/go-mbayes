@@ -1,6 +1,6 @@
 package mbayes
 
-func (cf *Classifier) saveSingle(act int, cat string, toks ...[]byte) error {
+func (cf *Classifier) doSingle(act int, cat string, toks ...[]byte) error {
 	tx, err := cf.db.Begin()
 	if err != nil {
 		return err
@@ -19,7 +19,7 @@ func (cf *Classifier) saveSingle(act int, cat string, toks ...[]byte) error {
 	return tx.Commit()
 }
 
-func (cf *Classifier) saveBatch(act int, cat string, toks ...[]byte) error {
+func (cf *Classifier) doBatch(act int, cat string, toks ...[]byte) error {
 	for _, tk := range toks {
 		cf.que <- trainingSample{
 			action:  act,
@@ -35,9 +35,9 @@ func (cf *Classifier) Train(category string, tokens ...[]byte) error {
 		return cf.err
 	}
 	if cf.tx == nil { //auto commit
-		return cf.saveSingle(TA_TRAIN, category, tokens...)
+		return cf.doSingle(TA_TRAIN, category, tokens...)
 	} else {
-		return cf.saveBatch(TA_TRAIN, category, tokens...)
+		return cf.doBatch(TA_TRAIN, category, tokens...)
 	}
 }
 
@@ -46,8 +46,8 @@ func (cf *Classifier) Untrain(category string, tokens ...[]byte) error {
 		return cf.err
 	}
 	if cf.tx == nil { //auto commit
-		return cf.saveSingle(TA_UNTRAIN, category, tokens...)
+		return cf.doSingle(TA_UNTRAIN, category, tokens...)
 	} else {
-		return cf.saveBatch(TA_UNTRAIN, category, tokens...)
+		return cf.doBatch(TA_UNTRAIN, category, tokens...)
 	}
 }

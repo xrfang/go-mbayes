@@ -28,7 +28,7 @@ func init() {
 	r = regexp.MustCompile("[a-zA-Z0-9]+")
 }
 
-func train(path string) {
+func train(act int, path string) {
 	cat := filepath.Base(filepath.Dir(path))
 	f, err := os.Open(path)
 	assert(err)
@@ -43,7 +43,12 @@ func train(path string) {
 	for tk := range dedup {
 		tokens = append(tokens, []byte(tk))
 	}
-	assert(c.Train(cat, tokens...))
+	switch act {
+	case mbayes.TA_TRAIN:
+		assert(c.Train(cat, tokens...))
+	case mbayes.TA_UNTRAIN:
+		assert(c.Untrain(cat, tokens...))
+	}
 	wg.Done()
 	<-rate
 }
@@ -56,6 +61,10 @@ func main() {
 	}
 	db := os.Args[1]
 	root := os.Args[2]
+	act := mbayes.TA_TRAIN
+	if filepath.Base(os.Args[0]) == "untrain" {
+		act = mbayes.TA_UNTRAIN
+	}
 	var err error
 	c, err = mbayes.Open(db)
 	assert(err)
@@ -67,7 +76,7 @@ func main() {
 		}
 		rate <- 1
 		wg.Add(1)
-		go train(path)
+		go train(act, path)
 		return nil
 	})
 	wg.Wait()
