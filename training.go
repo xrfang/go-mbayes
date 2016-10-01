@@ -1,65 +1,53 @@
 package mbayes
 
-import (
-	"database/sql"
-)
-
-func (cf *Classifier) Train(category string, tokens ...[]byte) (err error) {
-	if cf.err != nil {
-		return
+func (cf *Classifier) saveSingle(act int, cat string, toks ...[]byte) error {
+	tx, err := cf.db.Begin()
+	if err != nil {
+		return err
 	}
-	if cf.tx == nil { //auto commit
-		var tx *sql.Tx
-		tx, err = cf.db.Begin()
+	op := cf.add
+	if act == TA_UNTRAIN {
+		op = cf.del
+	}
+	for _, tk := range toks {
+		err = op(tx, cat, tk)
 		if err != nil {
-			return
-		}
-		for _, tk := range tokens {
-			err = cf.add(tx, category, tk)
-			if err != nil {
-				tx.Rollback()
-				return
-			}
-		}
-		err = tx.Commit()
-	} else {
-		for _, tk := range tokens {
-			cf.que <- trainingSample{
-				action:  TA_TRAIN,
-				feature: tk,
-				label:   category,
-			}
+			tx.Rollback()
+			return err
 		}
 	}
-	return
+	return tx.Commit()
 }
 
-func (cf *Classifier) Untrain(category string, tokens ...[]byte) (err error) {
+func (cf *Classifier) saveBatch(act int, cat string, toks ...[]byte) error {
+	for _, tk := range toks {
+		cf.que <- trainingSample{
+			action:  act,
+			feature: tk,
+			label:   cat,
+		}
+	}
+	return nil
+}
+
+func (cf *Classifier) Train(category string, tokens ...[]byte) error {
 	if cf.err != nil {
-		return
+		return cf.err
 	}
 	if cf.tx == nil { //auto commit
-		var tx *sql.Tx
-		tx, err = cf.db.Begin()
-		if err != nil {
-			return
-		}
-		for _, tk := range tokens {
-			err = cf.del(tx, category, tk)
-			if err != nil {
-				tx.Rollback()
-				return
-			}
-		}
-		err = tx.Commit()
+		return cf.saveSingle(TA_TRAIN, category, tokens...)
 	} else {
-		for _, tk := range tokens {
-			cf.que <- trainingSample{
-				action:  TA_UNTRAIN,
-				feature: tk,
-				label:   category,
-			}
-		}
+		return cf.saveBatch(TA_TRAIN, category, tokens...)
 	}
-	return
+}
+
+func (cf *Classifier) Untrain(category string, tokens ...[]byte) error {
+	if cf.err != nil {
+		return cf.err
+	}
+	if cf.tx == nil { //auto commit
+		return cf.saveSingle(TA_UNTRAIN, category, tokens...)
+	} else {
+		return cf.saveBatch(TA_UNTRAIN, category, tokens...)
+	}
 }
