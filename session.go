@@ -3,6 +3,8 @@ package mbayes
 import (
 	"database/sql"
 	"sync"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -19,11 +21,12 @@ type trainingSample struct {
 }
 
 type Classifier struct {
-	db  *sql.DB
-	err error
-	tx  *sql.Tx
-	que chan trainingSample
-	wg  sync.WaitGroup
+	db   *sql.DB
+	err  error
+	tx   *sql.Tx
+	cats int
+	que  chan trainingSample
+	wg   sync.WaitGroup
 }
 
 type SessionError struct {
@@ -35,15 +38,18 @@ func (se SessionError) Error() string {
 }
 
 func Open(dsn string) (*Classifier, error) {
-	db, err := sql.Open(DBTYPE, dsn)
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err
 	}
-	_, err = db.Exec(SQL("create"))
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tokens (tok TEXT NOT NULL, cat
+	    TEXT NOT NULL, cnt INTEGER DEFAULT (0), PRIMARY KEY (tok,cat))`)
 	if err != nil {
 		return nil, err
 	}
-	return &Classifier{db: db}, nil
+	c := &Classifier{db: db}
+	err = c.refreshCats()
+	return c, err
 }
 
 func (cf *Classifier) Close() (err error) {
@@ -84,7 +90,6 @@ func (cf *Classifier) Begin() (err error) {
 				break
 			}
 		}
-
 	}()
 	return
 }
@@ -96,7 +101,7 @@ func (cf *Classifier) Commit() (err error) {
 	cf.que <- trainingSample{action: TA_COMMIT}
 	cf.wg.Wait()
 	close(cf.que)
-	return
+	return cf.err
 }
 
 func (cf *Classifier) Rollback() (err error) {
@@ -106,9 +111,5 @@ func (cf *Classifier) Rollback() (err error) {
 	cf.que <- trainingSample{action: TA_ROLLBACK}
 	cf.wg.Wait()
 	close(cf.que)
-	return
-}
-
-func (cf *Classifier) Err() error {
 	return cf.err
 }

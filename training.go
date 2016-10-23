@@ -16,7 +16,11 @@ func (cf *Classifier) doSingle(act int, cat string, toks ...[]byte) error {
 			return err
 		}
 	}
-	return tx.Commit()
+	err = tx.Commit()
+	if err == nil {
+		err = cf.refreshCats()
+	}
+	return err
 }
 
 func (cf *Classifier) doBatch(act int, cat string, toks ...[]byte) error {
